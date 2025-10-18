@@ -1,0 +1,26 @@
+{
+  "name": "notification-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development node --env-file=.env --watch --experimental-strip-types src/index.ts",
+    "start": "NODE_ENV=production node --env-file=.env --experimental-strip-types src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "express": "^5.1",
+    "http-status-codes": "^2.3.0",
+    "supertest": "^7.1.4",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.7",
+    "@types/express": "^5.0",
+    "@types/node": "^24.3.2",
+    "typescript": "^5.9"
+  }
+}

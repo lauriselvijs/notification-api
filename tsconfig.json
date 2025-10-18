@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    // Node ESM behavior for .ts/.tsx
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    // Type-check only (Node handles execution)
+    "noEmit": true,
+
+    // Modern JS + lib
+    "target": "ESNext",
+
+    // Node typings
+    "types": ["node"],
+
+    // Keep imports verbatim; require type-only for types
+    "verbatimModuleSyntax": false,
+    "allowImportingTsExtensions": true,
+
+    // Strictness & speed
+    "strict": true,
+    "skipLibCheck": true
+  }
+}
