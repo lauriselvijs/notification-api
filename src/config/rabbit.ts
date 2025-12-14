@@ -1,6 +1,8 @@
-import amqplib, { ChannelModel, ConfirmChannel, ConsumeMessage } from "amqplib";
+import type { ChannelModel, ConfirmChannel, ConsumeMessage } from "amqplib";
+import amqplib from "amqplib";
 import { checkEnv } from "../util/variables.ts";
 import { ticketRoutingKeys } from "../enums/tickets.ts";
+import type { Ticket, TicketRoutingKey } from "../types/tickets.ts";
 
 const requiredEnvVars = [
   "RABBIT_HOST",
@@ -17,69 +19,101 @@ const PASS = process.env.RABBITMQ_DEFAULT_PASS!;
 const URL = `amqp://${USER}:${PASS}@${HOST}:${PORT}`;
 const EXCHANGE = "tickets";
 
-let conn: ChannelModel | null = null;
-let channel: ConfirmChannel | null = null;
+let rabbitConn: ChannelModel | null = null;
+let rabbitChannel: ConfirmChannel | null = null;
 
-export const connectToRabbit = async (): Promise<{
-  conn: ChannelModel;
-  ch: ConfirmChannel;
-}> => {
-  if (conn && channel) return { conn, ch: channel };
+let connecting: Promise<void> | null = null;
 
-  conn = await amqplib.connect(URL);
-  channel = await conn.createConfirmChannel();
-  await channel.assertExchange(EXCHANGE, "topic", { durable: true });
-  channel.prefetch(10);
+export const connectToRabbit = async (): Promise<void> => {
+  if (connecting) {
+    await connecting;
+  }
 
-  conn.on("error", (err) => console.error("RabbitMQ connection error:", err));
-  conn.on("close", () => console.warn("RabbitMQ connection closed"));
+  connecting = (async () => {
+    const conn = await amqplib.connect(URL);
+    const ch = await conn.createConfirmChannel();
 
-  console.log(`✅ Connected to RabbitMQ and exchange "${EXCHANGE}" is ready.`);
-  return { conn, ch: channel };
+    conn.on("error", (err) => console.error("RabbitMQ connection error:", err));
+    conn.on("close", () => {
+      console.warn("RabbitMQ connection closed");
+      rabbitConn = null;
+      rabbitChannel = null;
+    });
+
+    await ch.assertExchange(EXCHANGE, "topic", { durable: true });
+
+    rabbitConn = conn;
+    rabbitChannel = ch;
+  })();
+
+  await connecting;
+
+  connecting = null;
 };
 
 export const startTicketConsumer = async (
-  onMessage: (routingKey: string, payload: unknown) => Promise<void> | void
+  onMessage: (
+    routingKey: TicketRoutingKey,
+    payload: Ticket
+  ) => Promise<void> | void
 ): Promise<void> => {
-  const { ch } = await connectToRabbit();
-  const q = await ch.assertQueue("", { exclusive: true, autoDelete: true });
+  if (!rabbitChannel) {
+    await connectToRabbit();
+  }
+
+  if (!rabbitChannel) {
+    throw new Error("RabbitMQ channel not available after reconnect");
+  }
+
+  const q = await rabbitChannel.assertQueue("", {
+    exclusive: true,
+    autoDelete: true,
+  });
 
   for (const key of Object.values(ticketRoutingKeys)) {
-    await ch.bindQueue(q.queue, EXCHANGE, key);
+    await rabbitChannel.bindQueue(q.queue, EXCHANGE, key);
     console.log(`🔗 Bound queue "${q.queue}" → "${EXCHANGE}" with "${key}"`);
   }
 
   console.log(`👂 Waiting for messages in queue "${q.queue}"...`);
 
-  ch.consume(
+  rabbitChannel.consume(
     q.queue,
     async (msg: ConsumeMessage | null) => {
-      if (!msg) return;
-      const routingKey = msg.fields.routingKey;
+      if (!msg || !rabbitChannel) return;
+      const routingKey = msg.fields.routingKey as TicketRoutingKey;
       const body = msg.content.toString();
 
       try {
         const parsed = JSON.parse(body);
         console.log(`📥 [${routingKey}]`, parsed);
         await onMessage(routingKey, parsed);
-        ch.ack(msg);
+        rabbitChannel.ack(msg);
       } catch (err) {
         console.error("❌ Failed to process message:", err);
-        ch.nack(msg, false, false);
+        rabbitChannel.nack(msg, false, false);
       }
     },
     { noAck: false }
   );
 };
 
+export const getRabbitConnection = (): ChannelModel => {
+  if (!rabbitConn) throw new Error("❌ RabbitMQ connection not established");
+  return rabbitConn;
+};
+
+export const getRabbitChannel = (): ConfirmChannel => {
+  if (!rabbitChannel) throw new Error("❌ RabbitMQ channel not established");
+  return rabbitChannel;
+};
+
 export const closeRabbit = async (): Promise<void> => {
   try {
-    if (channel) await channel.close();
-    if (conn) await (conn as any).close?.();
-  } catch (err) {
-    console.error("⚠️ Error closing RabbitMQ connection:", err);
+    if (rabbitChannel) await rabbitChannel.close();
+    if (rabbitConn) await rabbitConn.close();
   } finally {
-    conn = null;
-    channel = null;
+    rabbitChannel = null;
+    rabbitConn = null;
   }
 };
