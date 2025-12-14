@@ -1,10 +1,10 @@
 import { ticketRoutingKeys } from "../enums/tickets.ts";
 import type { Ticket, TicketRoutingKey } from "../types/tickets.ts";
 
-export async function ticketConsumerHandler(
+const ticketConsumerHandler = async (
   key: TicketRoutingKey,
   payload: Ticket
-) {
+) => {
   const ticketRoutingKey = {
     [ticketRoutingKeys.CREATED]: () => console.log("Ticket Created:", payload),
     [ticketRoutingKeys.UPDATED]: () => console.log("Ticket Updated:", payload),
@@ -14,4 +14,6 @@ export async function ticketConsumerHandler(
   while (ticketRoutingKey[key]) {
     return ticketRoutingKey[key]();
   }
-}
+};
+
+export { ticketConsumerHandler };
