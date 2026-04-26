@@ -4,7 +4,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+RUN npm ci \
+    && npm run prisma:generate \
+    && npm prune --omit=dev \
+    && npm cache clean --force
 
 COPY src ./src
 

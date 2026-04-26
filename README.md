@@ -1,11 +1,13 @@
 # Notification API
 
-A Node.js API for notification workflows, built with Express and RabbitMQ.
+A Node.js API for notification workflows, built with Express, RabbitMQ, MySQL, and Prisma.
 
 ## Features
 
 - Express 5.x API server
 - RabbitMQ integration for messaging
+- MySQL development database
+- Prisma ORM
 - TypeScript support
 - Health check endpoint
 - Error handling middleware
@@ -73,10 +75,23 @@ src/
 - Management UI: [http://localhost:15672](http://localhost:15672)
 - Default broker port: `5672`
 
+## MySQL and Prisma
+
+- MySQL port: `3306`
+- Prisma Studio port: `5555`
+- Database: `notification_api`
+- Connection string: `DATABASE_URL` in `.env`
+- Generate Prisma client: `npm run prisma:generate`
+- Run local migrations: `npm run prisma:migrate`
+- Open Prisma Studio: `npm run prisma:studio`
+
 ## Scripts
 
 - `npm run dev` — Start in development mode
 - `npm start` — Start in production mode
+- `npm run prisma:generate` — Generate Prisma client
+- `npm run prisma:migrate` — Run Prisma migrations in development
+- `npm run prisma:studio` — Open Prisma Studio
 - `npm run typecheck` — TypeScript type checking
 
 ## License

@@ -5,11 +5,33 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ../.env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     volumes:
       - ../..:/workspaces:cached
     command: sleep infinity
     networks:
       - devnet
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    ports:
+      - "3306:3306"
+    networks:
+      - devnet
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   rabbitmq:
     image: rabbitmq:4.0-management
@@ -25,6 +47,7 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
 
 volumes:
+  mysql_data:
   rabbitmq_data:
 
 networks:

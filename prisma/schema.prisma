@@ -1,0 +1,18 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Notification {
+  id        String    @id @db.VarChar(36)
+  title     String
+  message   String    @db.Text
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@map("notifications")
+}

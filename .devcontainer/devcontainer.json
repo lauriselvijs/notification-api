@@ -1,7 +1,5 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/javascript-node-mongo
 {
-  "name": "Node.js & Mongo DB",
+  "name": "Node.js, MySQL & RabbitMQ",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
@@ -31,7 +29,7 @@
   "features": {},
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  "forwardPorts": [3000, "rabbitmq:15672"]
+  "forwardPorts": [3000, 5555, "mysql:3306", "rabbitmq:15672"]
 
   // Use 'postCreateCommand' to run commands after the container is created.
   // "postCreateCommand": "yarn install",
