@@ -2,10 +2,10 @@ import type { TicketIntegrationEventPayload } from "../events/ticket/TicketInteg
 import { TicketIntegrationEventType } from "../events/ticket/TicketIntegrationEventType.ts";
 
 export class HandleTicketIntegrationEventUseCase {
-  async execute(
+  execute(
     eventType: TicketIntegrationEventType,
-    payload: TicketIntegrationEventPayload
-  ): Promise<void> {
+    payload: TicketIntegrationEventPayload,
+  ): void {
     const handlers: Record<TicketIntegrationEventType, () => void> = {
       [TicketIntegrationEventType.CREATED]: () =>
         console.log("Ticket integration event received: created", payload),

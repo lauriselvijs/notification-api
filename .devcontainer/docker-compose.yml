@@ -12,6 +12,7 @@ services:
         condition: service_started
     volumes:
       - ../..:/workspaces:cached
+      - ../../.codex:/home/node/.codex
     command: sleep infinity
     networks:
       - devnet
