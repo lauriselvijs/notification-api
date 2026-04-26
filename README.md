@@ -1,6 +1,6 @@
-# Ticket Processing API
+# Notification API
 
-A Node.js API for processing tickets, built with Express and RabbitMQ.
+A Node.js API for notification workflows, built with Express and RabbitMQ.
 
 ## Features
 
@@ -55,12 +55,15 @@ A Node.js API for processing tickets, built with Express and RabbitMQ.
 
 ```
 src/
+  application/    # Use-case handlers
   config/         # Configuration files (Express, RabbitMQ)
   controllers/    # Route controllers
-  enums/          # Enums (e.g., ticket types)
+  domain/         # Domain entities, enums, repositories, and types
   errors/         # Custom error classes
+  infrastructure/ # External adapters such as RabbitMQ
   middleware/     # Express middleware (error handling, logging)
   routes/         # Route definitions
+  types/          # Compatibility type exports
   util/           # Utility functions
   index.ts        # Entry point
 ```
