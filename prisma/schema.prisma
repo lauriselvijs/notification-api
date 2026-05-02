@@ -9,10 +9,11 @@ datasource db {
 
 model Notification {
   id        String    @id @db.VarChar(36)
-  title     String
+  title     String    @db.VarChar(255)  
   message   String    @db.Text
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 
   @@map("notifications")
 }
+

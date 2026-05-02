@@ -22,7 +22,8 @@
         "yzhang.markdown-all-in-one",
         "redhat.vscode-yaml",
         "Postman.postman-for-vscode",
-        "openai.chatgpt"
+        "openai.chatgpt",
+        "Prisma.prisma"
       ]
     }
   },
