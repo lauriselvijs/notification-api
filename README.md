@@ -80,7 +80,11 @@ src/
 - MySQL port: `3306`
 - Prisma Studio port: `5555`
 - Database: `notification_api`
-- Connection string: `DATABASE_URL` in `.env`
+- Prisma connection env:
+  - `MYSQL_ROOT_PASSWORD=mysql`
+  - `MYSQL_DATABASE=notification_api`
+  - `MYSQL_HOST=mysql`
+  - `MYSQL_PORT=3306`
 - Generate Prisma client: `npm run prisma:generate`
 - Run local migrations: `npm run prisma:migrate`
 - Open Prisma Studio: `npm run prisma:studio`
