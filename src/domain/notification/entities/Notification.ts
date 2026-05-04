@@ -1,5 +1,5 @@
-import { NewNotification } from "../types/NewNotification.ts";
-import { UpdateNotification } from "../types/UpdateNotification.ts";
+import type { NewNotification } from "../types/NewNotification.ts";
+import type { UpdateNotification } from "../types/UpdateNotification.ts";
 
 export default class Notification {
   constructor(
