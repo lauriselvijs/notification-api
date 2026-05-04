@@ -7,7 +7,6 @@ import { prisma } from "./infrastructure/database/prisma.ts";
 import { startTicketIntegrationConsumer } from "./infrastructure/messaging/rabbit/rabbit.consumer.ts";
 
 const PORT = Number(process.env.PORT) || 3000;
-const RABBIT_RETRY_MS = Number(process.env.RABBIT_RETRY_MS) || 5000;
 
 async function start() {
   try {
@@ -34,14 +33,7 @@ async function startTicketIntegrationConsumerWithRetry(): Promise<void> {
       inboxEventRepository,
     );
   } catch (error) {
-    console.error(
-      `Failed to start RabbitMQ consumer. Retrying in ${RABBIT_RETRY_MS}ms`,
-      error,
-    );
-
-    setTimeout(() => {
-      void startTicketIntegrationConsumerWithRetry();
-    }, RABBIT_RETRY_MS);
+    console.error("Failed to start RabbitMQ consumer", error);
   }
 }
 
