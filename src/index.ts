@@ -1,5 +1,8 @@
 import { createApp } from "./app.ts";
-import { handleTicketIntegrationEventUseCase } from "./container.ts";
+import {
+  handleTicketIntegrationEventUseCase,
+  inboxEventRepository,
+} from "./container.ts";
 import { prisma } from "./infrastructure/database/prisma.ts";
 import { startTicketIntegrationConsumer } from "./infrastructure/messaging/rabbit/rabbit.consumer.ts";
 
@@ -9,8 +12,10 @@ async function start() {
   try {
     await prisma.$connect();
 
-    await startTicketIntegrationConsumer((eventType, payload) =>
-      handleTicketIntegrationEventUseCase.execute(eventType, payload),
+    await startTicketIntegrationConsumer(
+      (eventType, payload) =>
+        handleTicketIntegrationEventUseCase.execute(eventType, payload),
+      inboxEventRepository,
     );
 
     const app = createApp();

@@ -17,3 +17,24 @@ model Notification {
   @@map("notifications")
 }
 
+model InboxEvent {
+  id          String    @id @db.VarChar(36)
+  messageId   String    @unique @db.VarChar(255)
+  exchange    String    @db.VarChar(255)
+  routingKey  String    @db.VarChar(255)
+  eventType   String    @db.VarChar(100)
+  payload     Json
+  status      String    @default("PROCESSING") @db.VarChar(50)
+  leaseToken  String?   @db.VarChar(36)
+  attempts    Int       @default(1)
+  error       String?   @db.Text
+  receivedAt  DateTime  @default(now())
+  processingStartedAt DateTime @default(now())
+  processedAt DateTime?
+  failedAt    DateTime?
+
+  @@index([status])
+  @@index([status, processingStartedAt])
+  @@index([receivedAt])
+  @@map("inbox_events")
+}

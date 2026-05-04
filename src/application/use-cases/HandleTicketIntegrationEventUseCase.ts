@@ -1,20 +1,46 @@
+import Notification from "../../domain/notification/entities/Notification.ts";
+import type { NotificationRepository } from "../../domain/notification/repositories/NotificationRepository.ts";
 import type { TicketIntegrationEventPayload } from "../events/ticket/TicketIntegrationEventPayload.ts";
 import { TicketIntegrationEventType } from "../events/ticket/TicketIntegrationEventType.ts";
 
 export class HandleTicketIntegrationEventUseCase {
-  execute(
+  constructor(
+    private readonly notificationRepository: NotificationRepository,
+  ) {}
+
+  async execute(
     eventType: TicketIntegrationEventType,
     payload: TicketIntegrationEventPayload,
-  ): void {
-    const handlers: Record<TicketIntegrationEventType, () => void> = {
+  ): Promise<void> {
+    const handlers: Record<TicketIntegrationEventType, () => Promise<void>> = {
       [TicketIntegrationEventType.CREATED]: () =>
-        console.log("Ticket integration event received: created", payload),
+        this.notificationRepository.save(this.toNotification(payload)),
       [TicketIntegrationEventType.UPDATED]: () =>
-        console.log("Ticket integration event received: updated", payload),
-      [TicketIntegrationEventType.DELETED]: () =>
-        console.log("Ticket integration event received: deleted", payload),
+        this.notificationRepository.save(this.toNotification(payload)),
+      [TicketIntegrationEventType.DELETED]: async () => {
+        const notification = await this.notificationRepository.findById(payload.id);
+
+        if (!notification || notification.isDeleted()) {
+          return;
+        }
+
+        notification.delete();
+        await this.notificationRepository.save(notification);
+      },
     };
 
-    handlers[eventType]();
+    await handlers[eventType]();
+  }
+
+  private toNotification(
+    payload: TicketIntegrationEventPayload,
+  ): Notification {
+    return Notification.rehydrate(
+      payload.id,
+      payload.title,
+      payload.description,
+      payload.createdAt ? new Date(payload.createdAt) : new Date(),
+      null,
+    );
   }
 }

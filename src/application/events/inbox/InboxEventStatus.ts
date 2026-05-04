@@ -1,0 +1,5 @@
+export enum InboxEventStatus {
+  PROCESSING = "PROCESSING",
+  PROCESSED = "PROCESSED",
+  FAILED = "FAILED",
+}
