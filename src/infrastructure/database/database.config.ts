@@ -3,7 +3,7 @@ const {
   MYSQL_DATABASE,
   MYSQL_HOST,
   MYSQL_PORT,
-  MYSQL_USER,
+  MYSQL_USER = "root",
 } = process.env;
 
 if (
