@@ -1,6 +1,6 @@
 import amqplib from "amqplib";
 import type { ChannelModel, ConfirmChannel } from "amqplib";
-import { RABBIT_EXCHANGES } from "./rabbit.constants.ts";
+import { RABBIT_EXCHANGES, RABBIT_QUEUES } from "./rabbit.constants.ts";
 import { rabbitConfig } from "./rabbit.config.ts";
 
 let rabbitConn: ChannelModel | null = null;
@@ -34,6 +34,34 @@ export const connectToRabbit = async (): Promise<void> => {
     await ch.assertExchange(RABBIT_EXCHANGES.TICKETS, "topic", {
       durable: true,
     });
+    await ch.assertExchange(RABBIT_EXCHANGES.TICKET_RETRY, "topic", {
+      durable: true,
+    });
+    await ch.assertExchange(RABBIT_EXCHANGES.TICKET_DLX, "topic", {
+      durable: true,
+    });
+
+    await ch.assertQueue(RABBIT_QUEUES.TICKET_INTEGRATION_RETRY, {
+      durable: true,
+      arguments: {
+        "x-message-ttl": rabbitConfig.ticketRetryDelayMs,
+        "x-dead-letter-exchange": RABBIT_EXCHANGES.TICKETS,
+      },
+    });
+    await ch.bindQueue(
+      RABBIT_QUEUES.TICKET_INTEGRATION_RETRY,
+      RABBIT_EXCHANGES.TICKET_RETRY,
+      "#",
+    );
+
+    await ch.assertQueue(RABBIT_QUEUES.TICKET_INTEGRATION_DLQ, {
+      durable: true,
+    });
+    await ch.bindQueue(
+      RABBIT_QUEUES.TICKET_INTEGRATION_DLQ,
+      RABBIT_EXCHANGES.TICKET_DLX,
+      "#",
+    );
 
     rabbitConn = conn;
     rabbitChannel = ch;

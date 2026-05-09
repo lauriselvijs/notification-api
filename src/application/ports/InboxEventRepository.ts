@@ -6,6 +6,7 @@ export interface RegisterInboxEventInput {
   routingKey: string;
   eventType: string;
   payload: object;
+  maxAttempts: number;
 }
 
 export interface InboxEventRepository {
@@ -14,6 +15,7 @@ export interface InboxEventRepository {
   ): Promise<InboxProcessingResult>;
   markProcessed(messageId: string, leaseToken: string): Promise<boolean>;
   markFailed(messageId: string, leaseToken: string, error: unknown): Promise<boolean>;
+  markPoisoned(messageId: string, leaseToken: string, error: unknown): Promise<boolean>;
 }
 
 export interface InboxProcessingResult {

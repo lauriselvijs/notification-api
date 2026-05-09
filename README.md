@@ -74,6 +74,12 @@ src/
 
 - Management UI: [http://localhost:15672](http://localhost:15672)
 - Default broker port: `5672`
+- Ticket consumer queue: `notification.ticket-integration`
+- Retry queue: `notification.ticket-integration.retry`
+- DLQ: `notification.ticket-integration.dlq`
+- Optional retry env:
+  - `RABBIT_TICKET_RETRY_DELAY_MS=30000`
+  - `RABBIT_TICKET_MAX_RETRIES=3`
 
 ## MySQL and Prisma
 

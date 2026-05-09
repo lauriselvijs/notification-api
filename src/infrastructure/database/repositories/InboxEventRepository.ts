@@ -50,16 +50,40 @@ export class InboxEventRepository implements InboxEventRepositoryPort {
           );
         }
 
-        if (
-          existingRecord.status === InboxEventStatus.PROCESSED
-        ) {
+        if (existingRecord.status === InboxEventStatus.PROCESSED) {
           return {
             decision: InboxProcessingDecision.SKIP,
             leaseToken: null,
           };
         }
 
+        if (existingRecord.status === InboxEventStatus.POISONED) {
+          return {
+            decision: InboxProcessingDecision.DEAD_LETTER,
+            leaseToken: null,
+          };
+        }
+
         if (existingRecord.status === InboxEventStatus.FAILED) {
+          if (existingRecord.attempts >= input.maxAttempts) {
+            await prisma.inboxEvent.updateMany({
+              where: {
+                messageId: input.messageId,
+                status: InboxEventStatus.FAILED,
+              },
+              data: {
+                status: InboxEventStatus.POISONED,
+                leaseToken: null,
+                failedAt: new Date(),
+              },
+            });
+
+            return {
+              decision: InboxProcessingDecision.DEAD_LETTER,
+              leaseToken: null,
+            };
+          }
+
           const retried = await prisma.inboxEvent.updateMany({
             where: {
               messageId: input.messageId,
@@ -97,6 +121,33 @@ export class InboxEventRepository implements InboxEventRepositoryPort {
         const timeoutThreshold = new Date(
           now.getTime() - INBOX_PROCESSING_TIMEOUT_MS,
         );
+
+        if (existingRecord.attempts >= input.maxAttempts) {
+          const poisoned = await prisma.inboxEvent.updateMany({
+            where: {
+              messageId: input.messageId,
+              status: InboxEventStatus.PROCESSING,
+              processingStartedAt: {
+                lte: timeoutThreshold,
+              },
+            },
+            data: {
+              status: InboxEventStatus.POISONED,
+              leaseToken: null,
+              failedAt: now,
+            },
+          });
+
+          return poisoned.count === 1
+            ? {
+                decision: InboxProcessingDecision.DEAD_LETTER,
+                leaseToken: null,
+              }
+            : {
+                decision: InboxProcessingDecision.SKIP,
+                leaseToken: null,
+              };
+        }
 
         const reclaimed = await prisma.inboxEvent.updateMany({
           where: {
@@ -164,6 +215,28 @@ export class InboxEventRepository implements InboxEventRepositoryPort {
       },
       data: {
         status: InboxEventStatus.FAILED,
+        leaseToken: null,
+        error: this.formatError(error),
+        failedAt: new Date(),
+      },
+    });
+
+    return result.count === 1;
+  }
+
+  async markPoisoned(
+    messageId: string,
+    leaseToken: string,
+    error: unknown,
+  ): Promise<boolean> {
+    const result = await prisma.inboxEvent.updateMany({
+      where: {
+        messageId,
+        leaseToken,
+        status: InboxEventStatus.PROCESSING,
+      },
+      data: {
+        status: InboxEventStatus.POISONED,
         leaseToken: null,
         error: this.formatError(error),
         failedAt: new Date(),

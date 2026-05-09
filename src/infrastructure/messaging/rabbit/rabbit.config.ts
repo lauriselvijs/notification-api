@@ -3,13 +3,17 @@ const {
   RABBIT_PORT,
   RABBITMQ_DEFAULT_USER,
   RABBITMQ_DEFAULT_PASS,
+  RABBIT_TICKET_RETRY_DELAY_MS,
+  RABBIT_TICKET_MAX_RETRIES,
 } = process.env;
 
 if (
   !RABBIT_HOST ||
   !RABBIT_PORT ||
   !RABBITMQ_DEFAULT_USER ||
-  !RABBITMQ_DEFAULT_PASS
+  !RABBITMQ_DEFAULT_PASS ||
+  !RABBIT_TICKET_RETRY_DELAY_MS ||
+  !RABBIT_TICKET_MAX_RETRIES
 ) {
   throw new Error("Missing required RabbitMQ environment variables");
 }
@@ -20,4 +24,6 @@ export const rabbitConfig = {
   user: RABBITMQ_DEFAULT_USER,
   pass: RABBITMQ_DEFAULT_PASS,
   url: `amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@${RABBIT_HOST}:${RABBIT_PORT}`,
+  ticketRetryDelayMs: Number(RABBIT_TICKET_RETRY_DELAY_MS),
+  ticketMaxRetries: Number(RABBIT_TICKET_MAX_RETRIES),
 };

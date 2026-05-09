@@ -10,7 +10,8 @@ import {
   getTicketIntegrationEventTypeFromRoutingKey,
   ticketEventRoutingKeyMap,
 } from "../EventRoutingKeys.ts";
-import { RABBIT_EXCHANGES } from "./rabbit.constants.ts";
+import { RABBIT_EXCHANGES, RABBIT_QUEUES } from "./rabbit.constants.ts";
+import { rabbitConfig } from "./rabbit.config.ts";
 import { connectToRabbit, getRabbitChannel } from "./rabbit.connection.ts";
 
 export const startTicketIntegrationConsumer = async (
@@ -24,9 +25,13 @@ export const startTicketIntegrationConsumer = async (
 
   const rabbitChannel = getRabbitChannel();
 
-  const q = await rabbitChannel.assertQueue("", {
-    exclusive: true,
-    autoDelete: true,
+  await rabbitChannel.prefetch(10);
+
+  const q = await rabbitChannel.assertQueue(RABBIT_QUEUES.TICKET_INTEGRATION, {
+    durable: true,
+    arguments: {
+      "x-dead-letter-exchange": RABBIT_EXCHANGES.TICKET_RETRY,
+    },
   });
 
   for (const key of Object.values(ticketEventRoutingKeyMap)) {
@@ -66,12 +71,19 @@ export const startTicketIntegrationConsumer = async (
           routingKey: msg.fields.routingKey,
           eventType,
           payload: parsed,
+          maxAttempts: rabbitConfig.ticketMaxRetries + 1,
         });
         const { decision } = processingResult;
         leaseToken = processingResult.leaseToken;
 
         if (decision === InboxProcessingDecision.SKIP) {
           console.log(`Skipping claimed ticket message "${messageId}"`);
+          rabbitChannel.ack(msg);
+          return;
+        }
+
+        if (decision === InboxProcessingDecision.DEAD_LETTER) {
+          await publishToDeadLetterQueue(msg, "Inbox event is poisoned");
           rabbitChannel.ack(msg);
           return;
         }
@@ -96,6 +108,24 @@ export const startTicketIntegrationConsumer = async (
         rabbitChannel.ack(msg);
       } catch (err) {
         console.error("Failed to process ticket message:", err);
+
+        if (shouldDeadLetter(msg)) {
+          if (messageId && leaseToken) {
+            await inboxEventRepository
+              .markPoisoned(messageId, leaseToken, err)
+              .catch((markError) => {
+                console.error(
+                  "Failed to mark inbox event as poisoned:",
+                  markError,
+                );
+              });
+          }
+
+          await publishToDeadLetterQueue(msg, err);
+          rabbitChannel.ack(msg);
+          return;
+        }
+
         if (messageId && leaseToken) {
           await inboxEventRepository
             .markFailed(messageId, leaseToken, err)
@@ -133,4 +163,65 @@ const parseTicketIntegrationEvent = (body: string): TicketIntegrationEvent => {
         ? parsed.occurredAt
         : new Date(parsed.occurredAt),
   };
+};
+
+const shouldDeadLetter = (msg: ConsumeMessage): boolean =>
+  getRetryCount(msg) >= rabbitConfig.ticketMaxRetries;
+
+const getRetryCount = (msg: ConsumeMessage): number => {
+  const deaths = msg.properties.headers?.["x-death"];
+
+  if (!Array.isArray(deaths)) {
+    return 0;
+  }
+
+  return deaths
+    .filter(
+      (death) =>
+        death?.queue === RABBIT_QUEUES.TICKET_INTEGRATION_RETRY &&
+        death?.reason === "expired",
+    )
+    .reduce((total, death) => total + Number(death.count ?? 0), 0);
+};
+
+const publishToDeadLetterQueue = async (
+  msg: ConsumeMessage,
+  error: unknown,
+): Promise<void> => {
+  const rabbitChannel = getRabbitChannel();
+  const errorMessage = formatDeadLetterError(error);
+
+  rabbitChannel.publish(
+    RABBIT_EXCHANGES.TICKET_DLX,
+    msg.fields.routingKey,
+    msg.content,
+    {
+      persistent: true,
+      contentType: msg.properties.contentType,
+      contentEncoding: msg.properties.contentEncoding,
+      correlationId: msg.properties.correlationId,
+      messageId: msg.properties.messageId,
+      timestamp: msg.properties.timestamp,
+      type: msg.properties.type,
+      appId: msg.properties.appId,
+      headers: {
+        ...msg.properties.headers,
+        "x-notification-api-dead-letter-reason": errorMessage,
+        "x-notification-api-retry-count": getRetryCount(msg),
+      },
+    },
+  );
+
+  await rabbitChannel.waitForConfirms();
+  console.warn(
+    `Sent ticket message "${msg.properties.messageId ?? "unknown"}" to DLQ after ${getRetryCount(msg)} retries: ${errorMessage}`,
+  );
+};
+
+const formatDeadLetterError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 };
