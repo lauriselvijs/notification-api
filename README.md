@@ -11,6 +11,8 @@ A Node.js API for notification workflows, built with Express, RabbitMQ, MySQL, a
 - TypeScript support
 - Health check endpoint
 - Error handling middleware
+- Choreography saga for reacting to ticket integration events
+- Inbox pattern for idempotent RabbitMQ event consumption
 
 ## Getting Started
 
@@ -80,6 +82,15 @@ src/
 - Optional retry env:
   - `RABBIT_TICKET_RETRY_DELAY_MS=30000`
   - `RABBIT_TICKET_MAX_RETRIES=3`
+
+## Choreography Saga
+
+Notification API participates in the ticket workflow through a choreography saga:
+
+1. Ticket API publishes ticket lifecycle events to RabbitMQ
+2. Notification API consumes those events through its inbox-protected ticket queue
+3. `TicketNotificationChoreographySaga` reacts to `created`, `updated`, and `deleted` events by upserting or soft-deleting notifications
+4. Inbox records keep processing idempotent and route poisoned messages to the configured DLQ
 
 ## MySQL and Prisma
 
