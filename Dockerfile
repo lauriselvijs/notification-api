@@ -6,11 +6,12 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
-RUN npm ci \
-    && npm prune --omit=dev \
+RUN npm ci --omit=dev \
     && npm cache clean --force
 
 COPY src ./src
+
+COPY .env.example .env
 
 USER node
 
