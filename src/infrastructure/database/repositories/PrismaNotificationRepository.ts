@@ -1,10 +1,10 @@
 import Notification from "../../../domain/notification/entities/Notification.ts";
 import type { NotificationRepository } from "../../../domain/notification/repositories/NotificationRepository.ts";
-import { prisma } from "../prisma.ts";
+import { getPrisma } from "../prisma.ts";
 
 export class PrismaNotificationRepository implements NotificationRepository {
   async create(notification: Notification): Promise<void> {
-    await prisma.notification.create({
+    await getPrisma().notification.create({
       data: {
         id: notification.id,
         title: notification.title,
@@ -16,7 +16,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
   }
 
   async findById(id: string): Promise<Notification | null> {
-    const notification = await prisma.notification.findUnique({
+    const notification = await getPrisma().notification.findUnique({
       where: { id },
     });
 
@@ -24,7 +24,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
   }
 
   async findAll(): Promise<Notification[]> {
-    const notifications = await prisma.notification.findMany({
+    const notifications = await getPrisma().notification.findMany({
       orderBy: { createdAt: "desc" },
     });
 
@@ -32,7 +32,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
   }
 
   async update(notification: Notification): Promise<void> {
-    await prisma.notification.update({
+    await getPrisma().notification.update({
       where: { id: notification.id },
       data: {
         title: notification.title,
@@ -43,7 +43,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
   }
 
   async save(notification: Notification): Promise<void> {
-    await prisma.notification.upsert({
+    await getPrisma().notification.upsert({
       where: { id: notification.id },
       create: {
         id: notification.id,
